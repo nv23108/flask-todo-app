@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>To-Do App</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <h1>To-Do List</h1>
+        <form id="add-task-form">
+            <input type="text" id="task-input" placeholder="Enter task" required>
+            <button type="submit">Add Task</button>
+        </form>
+        
+        <div id="advanced-form" style="display: none; border: 1px solid #ccc; padding: 15px; margin-bottom: 20px; border-radius: 5px;">
+            <h3>Add Task with Details</h3>
+            <form id="advanced-add-task-form">
+                <div style="margin-bottom: 10px;">
+                    <label>Task Name:</label>
+                    <input type="text" id="adv-task-input" placeholder="Enter task name" required style="width: 100%; padding: 8px; box-sizing: border-box;">
+                </div>
+                <div style="margin-bottom: 10px;">
+                    <label>Description:</label>
+                    <textarea id="adv-description-input" placeholder="Enter task description" style="width: 100%; padding: 8px; box-sizing: border-box; min-height: 80px;"></textarea>
+                </div>
+                <div style="margin-bottom: 10px;">
+                    <label>Priority:</label>
+                    <select id="adv-priority-input" style="width: 100%; padding: 8px; box-sizing: border-box;">
+                        <option value="low">Low</option>
+                        <option value="medium" selected>Medium</option>
+                        <option value="high">High</option>
+                    </select>
+                </div>
+                <div style="margin-bottom: 10px;">
+                    <label>Due Date:</label>
+                    <input type="date" id="adv-due-date-input" style="width: 100%; padding: 8px; box-sizing: border-box;">
+                </div>
+                <button type="submit" style="background-color: #4CAF50; color: white; padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer;">Add Task</button>
+                <button type="button" id="hide-advanced-btn" style="background-color: #999; color: white; padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer;">Cancel</button>
+            </form>
+        </div>
+
+        <ul id="task-list">
+            {% for task in tasks %}
+                <li id="task-{{ task.id }}" class="{{ 'completed' if task.completed else '' }}">
+                    <span>{{ task.name }}</span>
+                    <button class="toggle" onclick="toggleTask({{ task.id }})">Toggle</button>
+                    <button class="delete" onclick="deleteTask({{ task.id }})">Delete</button>
+                </li>
+            {% endfor %}
+        </ul>
+    </div>
+
+    <script>
+            // Toggle advanced form
+            document.getElementById('show-advanced-btn').addEventListener('click', function() {
+                document.getElementById('advanced-form').style.display = 'block';
+            });
+        
+            document.getElementById('hide-advanced-btn').addEventListener('click', function() {
+                document.getElementById('advanced-form').style.display = 'none';
+            });
+        
+            // Advanced form submission
+            document.getElementById('advanced-add-task-form').addEventListener('submit', function(e) {
+                e.preventDefault();
+                const taskName = document.getElementById('adv-task-input').value.trim();
+                const description = document.getElementById('adv-description-input').value.trim();
+                const priority = document.getElementById('adv-priority-input').value;
+                const dueDate = document.getElementById('adv-due-date-input').value;
+            
+                if (taskName) {
+                    const params = new URLSearchParams({
+                        'task': taskName,
+                        'description': description,
+                        'priority': priority,
+                        'due_date': dueDate
+                    });
+                
+                    fetch('/add', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                        body: params
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        document.getElementById('adv-task-input').value = '';
+                        document.getElementById('adv-description-input').value = '';
+                        document.getElementById('adv-priority-input').value = 'medium';
+                        document.getElementById('adv-due-date-input').value = '';
+                        document.getElementById('advanced-form').style.display = 'none';
+                        renderTasks(data);
+                    });
+                }
+            });
+
+        document.getElementById('add-task-form').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const taskInput = document.getElementById('task-input');
+            const task = taskInput.value.trim();
+            if (task) {
+                fetch('/add', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: new URLSearchParams({ 'task': task })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    taskInput.value = '';
+                    renderTasks(data);
+                });
+            }
+        });
+
+        function renderTasks(tasks) {
+            const taskList = document.getElementById('task-list');
+            taskList.innerHTML = '';
+            tasks.forEach(task => {
+                const li = document.createElement('li');
+                li.id = `task-${task.id}`;
+                li.classList.toggle('completed', task.completed);
+                
+                    const priorityClass = task.priority ? `priority-${task.priority}` : 'priority-medium';
+                    const dueDate = task.due_date ? new Date(task.due_date).toLocaleDateString() : 'No due date';
+                    const description = task.description ? `<p style="font-size: 0.9em; color: #666; margin: 5px 0;">${escapeHtml(task.description)}</p>` : '';
+                
+                li.innerHTML = `
+                        <div style="flex: 1;">
+                            <span class="${priorityClass}" style="padding: 3px 8px; border-radius: 3px; font-size: 0.8em; margin-right: 10px;">${task.priority || 'medium'}</span>
+                            <span>${escapeHtml(task.name)}</span>
+                            ${description}
+                            <small style="color: #999;">Due: ${dueDate}</small>
+                        </div>
+                    <button class="toggle" onclick="toggleTask(${task.id})">Toggle</button>
+                    <button class="delete" onclick="deleteTask(${task.id})">Delete</button>
+                `;
+                taskList.appendChild(li);
+            });
+        }
+
+            function escapeHtml(text) {
+                const map = {
+                    '&': '&amp;',
+                    '<': '&lt;',
+                    '>': '&gt;',
+                    '"': '&quot;',
+                    "'": '&#039;'
+                };
+                return text.replace(/[&<>"']/g, m => map[m]);
+            }
+
+        function toggleTask(taskId) {
+            fetch(`/update/${taskId}`, { method: 'POST' })
+                .then(response => response.json())
+                .then(data => renderTasks(data));
+        }
+
+        function deleteTask(taskId) {
+            fetch(`/delete/${taskId}`, { method: 'DELETE' })
+                .then(response => response.json())
+                .then(data => renderTasks(data));
+        }
+    </script>
+</body>
+</html>
