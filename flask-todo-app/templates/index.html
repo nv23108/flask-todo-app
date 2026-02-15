@@ -40,6 +40,19 @@
     </div>
 
     <script>
+        let allTasks = [];
+
+        function initializeApp() {
+            fetch('/search?q=')
+                .then(r => r.json())
+                .then(data => {
+                    allTasks = data;
+                    renderTasks(data);
+                    refreshStats();
+                })
+                .catch(() => {});
+        }
+
         document.getElementById('add-task-form').addEventListener('submit', function(e) {
             e.preventDefault();
             const taskInput = document.getElementById('task-input');
@@ -52,8 +65,11 @@
                 })
                 .then(response => response.json())
                 .then(data => {
+                    allTasks = data;
                     taskInput.value = '';
+                    document.getElementById('search-input') && (document.getElementById('search-input').value = '');
                     renderTasks(data);
+                    refreshStats();
                 });
             }
         });
@@ -61,48 +77,72 @@
         function renderTasks(tasks) {
             const taskList = document.getElementById('task-list');
             taskList.innerHTML = '';
+            if (!tasks || tasks.length === 0) {
+                taskList.innerHTML = '<li style="text-align:center; padding:16px;'><em>No tasks</em></li>';
+                return;
+            }
             tasks.forEach(task => {
                 const li = document.createElement('li');
                 li.id = `task-${task.id}`;
                 li.classList.toggle('completed', task.completed);
+                const desc = task.description ? `<br><small style="color:#999">${escapeHtml(task.description)}</small>` : '';
+                const due = task.due_date ? `<br><small style="color:#999">Due: ${escapeHtml(task.due_date)}</small>` : '';
                 li.innerHTML = `
-                    <span>${task.name}</span>
+                    <div style="flex:1;">
+                        <span>${escapeHtml(task.name)}</span>
+                        ${desc}
+                        ${due}
+                    </div>
                     <button class="toggle" onclick="toggleTask(${task.id})">Toggle</button>
                     <button class="delete" onclick="deleteTask(${task.id})">Delete</button>
-        
-            // Fetch and update stats
-            function refreshStats() {
-                fetch('/stats')
-                    .then(r => r.json())
-                    .then(s => {
-                        document.getElementById('stats-total').textContent = s.total;
-                        document.getElementById('stats-completed').textContent = s.completed;
-                        document.getElementById('stats-overdue').textContent = s.overdue;
-                    }).catch(() => {});
-            }
-
-            // Update stats when tasks change
-            const originalRenderTasks = renderTasks;
-            renderTasks = function(tasks) {
-                originalRenderTasks(tasks);
-                refreshStats();
-            }
                 `;
                 taskList.appendChild(li);
             });
         }
 
+        function escapeHtml(text) {
+            if (!text) return '';
+            return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
+        }
+
+        function refreshStats() {
+            fetch('/stats')
+                .then(r => r.json())
+                .then(s => {
+                    document.getElementById('stats-total').textContent = s.total;
+                    document.getElementById('stats-completed').textContent = s.completed;
+                    document.getElementById('stats-overdue').textContent = s.overdue;
+                }).catch(() => {});
+        }
+
+        // Wrap renderTasks so stats are refreshed after render
+        const originalRenderTasks = renderTasks;
+        renderTasks = function(tasks) {
+            originalRenderTasks(tasks);
+            refreshStats();
+        }
+
         function toggleTask(taskId) {
             fetch(`/update/${taskId}`, { method: 'POST' })
                 .then(response => response.json())
-                .then(data => renderTasks(data));
+                .then(data => {
+                    allTasks = data;
+                    document.getElementById('search-input') && (document.getElementById('search-input').value = '');
+                    renderTasks(data);
+                });
         }
 
         function deleteTask(taskId) {
             fetch(`/delete/${taskId}`, { method: 'DELETE' })
                 .then(response => response.json())
-                .then(data => renderTasks(data));
+                .then(data => {
+                    allTasks = data;
+                    document.getElementById('search-input') && (document.getElementById('search-input').value = '');
+                    renderTasks(data);
+                });
         }
+
+        window.addEventListener('DOMContentLoaded', initializeApp);
     </script>
 </body>
 </html>
