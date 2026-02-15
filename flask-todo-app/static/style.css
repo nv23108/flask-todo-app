@@ -168,3 +168,12 @@ button:hover {
         justify-content: flex-end;
     }
 }
+
+/* Modal adjustments */
+#edit-modal {
+     display: none;
+     align-items: center;
+     justify-content: center;
+}
+
+#edit-modal > div { max-width: 420px; }

@@ -33,10 +33,32 @@
                 <li id="task-{{ task.id }}" class="{{ 'completed' if task.completed else '' }}">
                     <span>{{ task.name }}</span>
                     <button class="toggle" onclick="toggleTask({{ task.id }})">Toggle</button>
+                    <button class="edit" onclick="openEditModal({{ task.id }})">Edit</button>
                     <button class="delete" onclick="deleteTask({{ task.id }})">Delete</button>
                 </li>
             {% endfor %}
         </ul>
+    </div>
+
+    <!-- Edit modal -->
+    <div id="edit-modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5); align-items:center; justify-content:center;">
+        <div style="background:#0f1724; padding:18px; border-radius:10px; width:420px; max-width:95%; color:#fff; box-shadow:0 12px 30px rgba(0,0,0,0.6);">
+            <h3 style="margin-top:0;">Edit Task</h3>
+            <div style="display:flex; flex-direction:column; gap:8px;">
+                <input id="edit-name" placeholder="Task name" style="padding:8px; border-radius:6px; border:none; background:rgba(255,255,255,0.04); color:#fff;">
+                <textarea id="edit-description" placeholder="Description" style="padding:8px; border-radius:6px; border:none; background:rgba(255,255,255,0.04); color:#fff; min-height:80px;"></textarea>
+                <select id="edit-priority" style="padding:8px; border-radius:6px; border:none; background:rgba(255,255,255,0.04); color:#fff;">
+                    <option value="low">Low</option>
+                    <option value="medium">Medium</option>
+                    <option value="high">High</option>
+                </select>
+                <input id="edit-due_date" type="date" style="padding:8px; border-radius:6px; border:none; background:rgba(255,255,255,0.04); color:#fff;">
+            </div>
+            <div style="display:flex; gap:8px; justify-content:flex-end; margin-top:12px;">
+                <button id="edit-cancel" style="background:#777; color:#fff; padding:8px 10px; border-radius:6px; border:none;">Cancel</button>
+                <button id="edit-save" style="background:#06b6d4; color:#042; padding:8px 10px; border-radius:6px; border:none;">Save</button>
+            </div>
+        </div>
     </div>
 
     <script>
@@ -141,6 +163,54 @@
                     renderTasks(data);
                 });
         }
+
+        // Edit modal handlers
+        function openEditModal(taskId) {
+            const task = allTasks.find(t => t.id === taskId);
+            if (!task) {
+                // fallback: fetch single task
+                fetch(`/task/${taskId}`).then(r => r.json()).then(t => {
+                    populateEditModal(t);
+                    document.getElementById('edit-modal').style.display = 'flex';
+                });
+                return;
+            }
+            populateEditModal(task);
+            document.getElementById('edit-modal').style.display = 'flex';
+            document.getElementById('edit-modal').dataset.editing = taskId;
+        }
+
+        function populateEditModal(task) {
+            document.getElementById('edit-name').value = task.name || '';
+            document.getElementById('edit-description').value = task.description || '';
+            document.getElementById('edit-priority').value = task.priority || 'medium';
+            // normalize due_date to yyyy-mm-dd if possible
+            try { document.getElementById('edit-due_date').value = task.due_date || ''; } catch(e){}
+        }
+
+        function closeEditModal() {
+            document.getElementById('edit-modal').style.display = 'none';
+            delete document.getElementById('edit-modal').dataset.editing;
+        }
+
+        document.getElementById('edit-cancel').addEventListener('click', function(){ closeEditModal(); });
+        document.getElementById('edit-save').addEventListener('click', function(){
+            const id = parseInt(document.getElementById('edit-modal').dataset.editing, 10);
+            if (!id) return closeEditModal();
+            const payload = new URLSearchParams({
+                name: document.getElementById('edit-name').value.trim(),
+                description: document.getElementById('edit-description').value.trim(),
+                priority: document.getElementById('edit-priority').value,
+                due_date: document.getElementById('edit-due_date').value
+            });
+            fetch(`/task/${id}/update`, { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: payload })
+                .then(r => r.json())
+                .then(data => {
+                    allTasks = data;
+                    renderTasks(data);
+                    closeEditModal();
+                });
+        });
 
         window.addEventListener('DOMContentLoaded', initializeApp);
     </script>
