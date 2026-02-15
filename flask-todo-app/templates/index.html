@@ -1,4 +1,5 @@
 <!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -14,6 +15,11 @@
             <button type="submit">Add Task</button>
         </form>
 
+        <div style="margin: 15px 0;">
+            <input type="text" id="search-input" placeholder="Search tasks by title or description..." style="width: 100%; padding: 10px; box-sizing: border-box; border-radius: 8px;">
+            <small id="search-result-count" style="color: #666; margin-top: 5px; display: block;"></small>
+        </div>
+
         <ul id="task-list">
             {% for task in tasks %}
                 <li id="task-{{ task.id }}" class="{{ 'completed' if task.completed else '' }}">
@@ -26,6 +32,45 @@
     </div>
 
     <script>
+        let allTasks = [];
+        
+        function initializeApp() {
+            fetch('/search?q=')
+                .then(response => response.json())
+                .then(data => {
+                    allTasks = data;
+                    renderTasks(data);
+                });
+        }
+
+        document.getElementById('search-input').addEventListener('input', function(e) {
+            const query = e.target.value.trim();
+            
+            if (!query) {
+                renderTasks(allTasks);
+                updateSearchCount(allTasks.length);
+                return;
+            }
+            
+            const filteredTasks = allTasks.filter(task => {
+                const name = (task.name || '').toLowerCase();
+                const desc = (task.description || '').toLowerCase();
+                return name.includes(query.toLowerCase()) || desc.includes(query.toLowerCase());
+            });
+            
+            renderTasks(filteredTasks);
+            updateSearchCount(filteredTasks.length, allTasks.length);
+        });
+
+        function updateSearchCount(count, total) {
+            const countEl = document.getElementById('search-result-count');
+            if (total) {
+                countEl.textContent = `Found ${count} of ${total} tasks`;
+            } else {
+                countEl.textContent = '';
+            }
+        }
+
         document.getElementById('add-task-form').addEventListener('submit', function(e) {
             e.preventDefault();
             const taskInput = document.getElementById('task-input');
@@ -38,7 +83,10 @@
                 })
                 .then(response => response.json())
                 .then(data => {
+                    allTasks = data;
                     taskInput.value = '';
+                    document.getElementById('search-input').value = '';
+                    updateSearchCount(data.length);
                     renderTasks(data);
                 });
             }
@@ -47,12 +95,26 @@
         function renderTasks(tasks) {
             const taskList = document.getElementById('task-list');
             taskList.innerHTML = '';
+            
+            if (tasks.length === 0) {
+                taskList.innerHTML = '<li style="text-align: center; padding: 20px;"><em>No tasks found</em></li>';
+                return;
+            }
+            
             tasks.forEach(task => {
                 const li = document.createElement('li');
                 li.id = `task-${task.id}`;
                 li.classList.toggle('completed', task.completed);
+                
+                const description = task.description ? `<br><small style="color: #999;">${escapeHtml(task.description)}</small>` : '';
+                const dueDate = task.due_date ? `<br><small style="color: #999;">Due: ${new Date(task.due_date).toLocaleDateString()}</small>` : '';
+                
                 li.innerHTML = `
-                    <span>${task.name}</span>
+                    <div style="flex: 1;">
+                        <span>${escapeHtml(task.name)}</span>
+                        ${description}
+                        ${dueDate}
+                    </div>
                     <button class="toggle" onclick="toggleTask(${task.id})">Toggle</button>
                     <button class="delete" onclick="deleteTask(${task.id})">Delete</button>
                 `;
@@ -60,17 +122,38 @@
             });
         }
 
+        function escapeHtml(text) {
+            const map = {
+                '&': '&amp;',
+                '<': '&lt;',
+                '>': '&gt;',
+                '"': '&quot;',
+                "'": '&#039;'
+            };
+            return text.replace(/[&<>"']/g, m => map[m]);
+        }
+
         function toggleTask(taskId) {
             fetch(`/update/${taskId}`, { method: 'POST' })
                 .then(response => response.json())
-                .then(data => renderTasks(data));
+                .then(data => {
+                    allTasks = data;
+                    document.getElementById('search-input').value = '';
+                    renderTasks(data);
+                });
         }
 
         function deleteTask(taskId) {
             fetch(`/delete/${taskId}`, { method: 'DELETE' })
                 .then(response => response.json())
-                .then(data => renderTasks(data));
+                .then(data => {
+                    allTasks = data;
+                    document.getElementById('search-input').value = '';
+                    renderTasks(data);
+                });
         }
+
+        window.addEventListener('DOMContentLoaded', initializeApp);
     </script>
 </body>
 </html>
