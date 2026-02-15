@@ -9,6 +9,20 @@
 <body>
     <div class="container">
         <h1>To-Do List</h1>
+        <div id="stats-widget" style="display:flex; gap:12px; margin-bottom: 18px;">
+            <div style="background: rgba(255,255,255,0.06); padding:10px 12px; border-radius:8px; text-align:center; min-width:90px;">
+                <div style="font-size:18px; font-weight:700" id="stats-total">0</div>
+                <div style="font-size:12px; color:#ccc">Total</div>
+            </div>
+            <div style="background: rgba(255,255,255,0.06); padding:10px 12px; border-radius:8px; text-align:center; min-width:90px;">
+                <div style="font-size:18px; font-weight:700" id="stats-completed">0</div>
+                <div style="font-size:12px; color:#ccc">Completed</div>
+            </div>
+            <div style="background: rgba(255,255,255,0.06); padding:10px 12px; border-radius:8px; text-align:center; min-width:90px;">
+                <div style="font-size:18px; font-weight:700" id="stats-overdue">0</div>
+                <div style="font-size:12px; color:#ccc">Overdue</div>
+            </div>
+        </div>
         <form id="add-task-form">
             <input type="text" id="task-input" placeholder="Enter task" required>
             <button type="submit">Add Task</button>
@@ -55,6 +69,24 @@
                     <span>${task.name}</span>
                     <button class="toggle" onclick="toggleTask(${task.id})">Toggle</button>
                     <button class="delete" onclick="deleteTask(${task.id})">Delete</button>
+        
+            // Fetch and update stats
+            function refreshStats() {
+                fetch('/stats')
+                    .then(r => r.json())
+                    .then(s => {
+                        document.getElementById('stats-total').textContent = s.total;
+                        document.getElementById('stats-completed').textContent = s.completed;
+                        document.getElementById('stats-overdue').textContent = s.overdue;
+                    }).catch(() => {});
+            }
+
+            // Update stats when tasks change
+            const originalRenderTasks = renderTasks;
+            renderTasks = function(tasks) {
+                originalRenderTasks(tasks);
+                refreshStats();
+            }
                 `;
                 taskList.appendChild(li);
             });
