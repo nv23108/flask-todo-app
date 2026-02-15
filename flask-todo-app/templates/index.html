@@ -116,6 +116,7 @@
                         ${due}
                     </div>
                     <button class="toggle" onclick="toggleTask(${task.id})">Toggle</button>
+                    <button class="edit" onclick="openEditModal(${task.id})">Edit</button>
                     <button class="delete" onclick="deleteTask(${task.id})">Delete</button>
                 `;
                 taskList.appendChild(li);
