@@ -39,6 +39,38 @@ body {
     animation: fadeUp 0.8s ease;
 }
 
+.todo-title {
+    font-size: 1.6rem;
+    font-weight: 700;
+    margin-bottom: 8px;
+}
+
+.stats-card {
+    display:flex;
+    gap:8px;
+    background: rgba(255,255,255,0.04);
+    padding:8px;
+    border-radius:10px;
+    justify-content:space-between;
+}
+.stats-card .stat { text-align:center; min-width:60px }
+.stats-card .stat > div:first-child { font-weight:700; font-size:1.1rem }
+.stats-card .stat-label { font-size:0.8rem; color:var(--text-muted) }
+
+.task-list { margin-top: 12px; }
+.task-item { margin-bottom:12px; padding:12px; border-radius:12px; background: rgba(0,0,0,0.12); display:flex; align-items:center; }
+.task-main { display:flex; justify-content:space-between; width:100%; align-items:center }
+.task-left { max-width:75%; }
+.task-name { font-weight:600; display:block }
+.task-desc { color:var(--text-muted); margin-top:6px; font-size:0.9rem }
+.task-due { color:var(--text-muted); margin-top:4px; font-size:0.85rem }
+.task-actions { display:flex; gap:8px }
+
+.edit-btn { background: linear-gradient(135deg,#fcd34d,#f59e0b); color:#111; padding:8px 10px; border-radius:8px }
+.delete-btn { background: linear-gradient(135deg,#fb7185,#be123c); padding:8px 10px; border-radius:8px }
+.add-btn { background: linear-gradient(135deg,#10b981,#059669); padding:8px 12px; border-radius:10px }
+.complete-btn { background: linear-gradient(135deg,#60a5fa,#2563eb); padding:8px 10px; border-radius:8px }
+
 /* ================= TITLE ================= */
 .todo-title {
     font-weight: 700;

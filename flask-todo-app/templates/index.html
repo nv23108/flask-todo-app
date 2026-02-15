@@ -8,36 +8,46 @@
 </head>
 <body>
     <div class="container">
-        <h1>To-Do List</h1>
-        <div id="stats-widget" style="display:flex; gap:12px; margin-bottom: 18px;">
-            <div style="background: rgba(255,255,255,0.06); padding:10px 12px; border-radius:8px; text-align:center; min-width:90px;">
-                <div style="font-size:18px; font-weight:700" id="stats-total">0</div>
-                <div style="font-size:12px; color:#ccc">Total</div>
-            </div>
-            <div style="background: rgba(255,255,255,0.06); padding:10px 12px; border-radius:8px; text-align:center; min-width:90px;">
-                <div style="font-size:18px; font-weight:700" id="stats-completed">0</div>
-                <div style="font-size:12px; color:#ccc">Completed</div>
-            </div>
-            <div style="background: rgba(255,255,255,0.06); padding:10px 12px; border-radius:8px; text-align:center; min-width:90px;">
-                <div style="font-size:18px; font-weight:700" id="stats-overdue">0</div>
-                <div style="font-size:12px; color:#ccc">Overdue</div>
-            </div>
-        </div>
-        <form id="add-task-form">
-            <input type="text" id="task-input" placeholder="Enter task" required>
-            <button type="submit">Add Task</button>
-        </form>
+        <div class="todo-card">
+            <div class="todo-title">To-Do</div>
 
-        <ul id="task-list">
-            {% for task in tasks %}
-                <li id="task-{{ task.id }}" class="{{ 'completed' if task.completed else '' }}">
-                    <span>{{ task.name }}</span>
-                    <button class="toggle" onclick="toggleTask({{ task.id }})">Toggle</button>
-                    <button class="edit" onclick="openEditModal({{ task.id }})">Edit</button>
-                    <button class="delete" onclick="deleteTask({{ task.id }})">Delete</button>
-                </li>
-            {% endfor %}
-        </ul>
+            <div style="display:flex; gap:16px; align-items:center; justify-content:space-between; margin-bottom:16px;">
+                <div style="flex:1;">
+                    <form id="add-task-form" style="display:flex; gap:8px;">
+                        <input type="text" id="task-input" placeholder="Add a new task..." required style="flex:1;">
+                        <button class="add-btn" type="submit">Add</button>
+                    </form>
+                    <input id="search-input" placeholder="Search tasks by title or description..." style="margin-top:10px; width:100%; padding:10px; border-radius:10px;">
+                </div>
+
+                <div style="width:220px;">
+                    <div class="stats-card">
+                        <div class="stat"><div id="stats-total">0</div><div class="stat-label">Total</div></div>
+                        <div class="stat"><div id="stats-completed">0</div><div class="stat-label">Completed</div></div>
+                        <div class="stat"><div id="stats-overdue">0</div><div class="stat-label">Overdue</div></div>
+                    </div>
+                </div>
+            </div>
+
+            <ul id="task-list" class="task-list">
+                {% for task in tasks %}
+                    <li id="task-{{ task.id }}" class="task-item {{ 'completed' if task.completed else '' }}">
+                        <div class="task-main">
+                            <div class="task-left">
+                                <span class="task-name">{{ task.name }}</span>
+                                {% if task.description %}<div class="task-desc">{{ task.description }}</div>{% endif %}
+                                {% if task.due_date %}<div class="task-due">Due: {{ task.due_date }}</div>{% endif %}
+                            </div>
+                            <div class="task-actions">
+                                <button class="complete-btn" onclick="toggleTask({{ task.id }})">{{ 'Undo' if task.completed else 'Done' }}</button>
+                                <button class="edit-btn" onclick="openEditModal({{ task.id }})">Edit</button>
+                                <button class="delete-btn" onclick="deleteTask({{ task.id }})">Delete</button>
+                            </div>
+                        </div>
+                    </li>
+                {% endfor %}
+            </ul>
+        </div>
     </div>
 
     <!-- Edit modal -->
