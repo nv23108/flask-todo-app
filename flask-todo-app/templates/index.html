@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>To-Do App</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <div class="todo-card">
+            <div class="todo-title">To-Do</div>
+
+            <div style="display:flex; gap:16px; align-items:center; justify-content:space-between; margin-bottom:16px;">
+                <div style="flex:1;">
+                    <form id="add-task-form" style="display:flex; gap:8px;">
+                        <input type="text" id="task-input" placeholder="Add a new task..." required style="flex:1;">
+                        <button class="add-btn" type="submit">Add</button>
+                    </form>
+                    <input id="search-input" placeholder="Search tasks by title or description..." style="margin-top:10px; width:100%; padding:10px; border-radius:10px;">
+                </div>
+
+                <div style="width:220px;">
+                    <div class="stats-card">
+                        <div class="stat"><div id="stats-total">0</div><div class="stat-label">Total</div></div>
+                        <div class="stat"><div id="stats-completed">0</div><div class="stat-label">Completed</div></div>
+                        <div class="stat"><div id="stats-overdue">0</div><div class="stat-label">Overdue</div></div>
+                    </div>
+                </div>
+            </div>
+
+            <ul id="task-list" class="task-list">
+                {% for task in tasks %}
+                    <li id="task-{{ task.id }}" class="task-item {{ 'completed' if task.completed else '' }}">
+                        <div class="task-main">
+                            <div class="task-left">
+                                <span class="task-name">{{ task.name }}</span>
+                                {% if task.description %}<div class="task-desc">{{ task.description }}</div>{% endif %}
+                                {% if task.due_date %}<div class="task-due">Due: {{ task.due_date }}</div>{% endif %}
+                            </div>
+                            <div class="task-actions">
+                                <button class="complete-btn" onclick="toggleTask({{ task.id }})">{{ 'Undo' if task.completed else 'Done' }}</button>
+                                <button class="edit-btn" onclick="openEditModal({{ task.id }})">Edit</button>
+                                <button class="delete-btn" onclick="deleteTask({{ task.id }})">Delete</button>
+                            </div>
+                        </div>
+                    </li>
+                {% endfor %}
+            </ul>
+        </div>
+    </div>
+
+    <!-- Edit modal -->
+    <div id="edit-modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5); align-items:center; justify-content:center;">
+        <div style="background:#0f1724; padding:18px; border-radius:10px; width:420px; max-width:95%; color:#fff; box-shadow:0 12px 30px rgba(0,0,0,0.6);">
+            <h3 style="margin-top:0;">Edit Task</h3>
+            <div style="display:flex; flex-direction:column; gap:8px;">
+                <input id="edit-name" placeholder="Task name" style="padding:8px; border-radius:6px; border:none; background:rgba(255,255,255,0.04); color:#fff;">
+                <textarea id="edit-description" placeholder="Description" style="padding:8px; border-radius:6px; border:none; background:rgba(255,255,255,0.04); color:#fff; min-height:80px;"></textarea>
+                <select id="edit-priority" style="padding:8px; border-radius:6px; border:none; background:rgba(255,255,255,0.04); color:#fff;">
+                    <option value="low">Low</option>
+                    <option value="medium">Medium</option>
+                    <option value="high">High</option>
+                </select>
+                <input id="edit-due_date" type="date" style="padding:8px; border-radius:6px; border:none; background:rgba(255,255,255,0.04); color:#fff;">
+            </div>
+            <div style="display:flex; gap:8px; justify-content:flex-end; margin-top:12px;">
+                <button id="edit-cancel" style="background:#777; color:#fff; padding:8px 10px; border-radius:6px; border:none;">Cancel</button>
+                <button id="edit-save" style="background:#06b6d4; color:#042; padding:8px 10px; border-radius:6px; border:none;">Save</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let allTasks = [];
+
+        function initializeApp() {
+            fetch('/search?q=')
+                .then(r => r.json())
+                .then(data => {
+                    allTasks = data;
+                    renderTasks(data);
+                    refreshStats();
+                })
+                .catch(() => {});
+        }
+
+        document.getElementById('add-task-form').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const taskInput = document.getElementById('task-input');
+            const task = taskInput.value.trim();
+            if (task) {
+                fetch('/add', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: new URLSearchParams({ 'task': task })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    allTasks = data;
+                    taskInput.value = '';
+                    document.getElementById('search-input') && (document.getElementById('search-input').value = '');
+                    renderTasks(data);
+                    refreshStats();
+                });
+            }
+        });
+
+        function renderTasks(tasks) {
+            const taskList = document.getElementById('task-list');
+            taskList.innerHTML = '';
+            if (!tasks || tasks.length === 0) {
+                taskList.innerHTML = '<li style="text-align:center; padding:16px;"><em>No tasks</em></li>';
+                return;
+            }
+            tasks.forEach(task => {
+                const li = document.createElement('li');
+                li.id = `task-${task.id}`;
+                li.classList.toggle('completed', task.completed);
+                const desc = task.description ? `<br><small style="color:#999">${escapeHtml(task.description)}</small>` : '';
+                const due = task.due_date ? `<br><small style="color:#999">Due: ${escapeHtml(task.due_date)}</small>` : '';
+                li.innerHTML = `
+                    <div style="flex:1;">
+                        <span>${escapeHtml(task.name)}</span>
+                        ${desc}
+                        ${due}
+                    </div>
+                    <button class="toggle" onclick="toggleTask(${task.id})">Toggle</button>
+                    <button class="edit" onclick="openEditModal(${task.id})">Edit</button>
+                    <button class="delete" onclick="deleteTask(${task.id})">Delete</button>
+                `;
+                taskList.appendChild(li);
+            });
+        }
+
+        function escapeHtml(text) {
+            if (!text) return '';
+            return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
+        }
+
+        function refreshStats() {
+            fetch('/stats')
+                .then(r => r.json())
+                .then(s => {
+                    document.getElementById('stats-total').textContent = s.total;
+                    document.getElementById('stats-completed').textContent = s.completed;
+                    document.getElementById('stats-overdue').textContent = s.overdue;
+                }).catch(() => {});
+        }
+
+        // Wrap renderTasks so stats are refreshed after render
+        const originalRenderTasks = renderTasks;
+        renderTasks = function(tasks) {
+            originalRenderTasks(tasks);
+            refreshStats();
+        }
+
+        function toggleTask(taskId) {
+            fetch(`/update/${taskId}`, { method: 'POST' })
+                .then(response => response.json())
+                .then(data => {
+                    allTasks = data;
+                    document.getElementById('search-input') && (document.getElementById('search-input').value = '');
+                    renderTasks(data);
+                });
+        }
+
+        function deleteTask(taskId) {
+            fetch(`/delete/${taskId}`, { method: 'DELETE' })
+                .then(response => response.json())
+                .then(data => {
+                    allTasks = data;
+                    document.getElementById('search-input') && (document.getElementById('search-input').value = '');
+                    renderTasks(data);
+                });
+        }
+
+        // Edit modal handlers
+        function openEditModal(taskId) {
+            const task = allTasks.find(t => t.id === taskId);
+            if (!task) {
+                // fallback: fetch single task
+                fetch(`/task/${taskId}`).then(r => r.json()).then(t => {
+                    populateEditModal(t);
+                    document.getElementById('edit-modal').style.display = 'flex';
+                });
+                return;
+            }
+            populateEditModal(task);
+            document.getElementById('edit-modal').style.display = 'flex';
+            document.getElementById('edit-modal').dataset.editing = taskId;
+        }
+
+        function populateEditModal(task) {
+            document.getElementById('edit-name').value = task.name || '';
+            document.getElementById('edit-description').value = task.description || '';
+            document.getElementById('edit-priority').value = task.priority || 'medium';
+            // normalize due_date to yyyy-mm-dd if possible
+            try { document.getElementById('edit-due_date').value = task.due_date || ''; } catch(e){}
+        }
+
+        function closeEditModal() {
+            document.getElementById('edit-modal').style.display = 'none';
+            delete document.getElementById('edit-modal').dataset.editing;
+        }
+
+        document.getElementById('edit-cancel').addEventListener('click', function(){ closeEditModal(); });
+        document.getElementById('edit-save').addEventListener('click', function(){
+            const id = parseInt(document.getElementById('edit-modal').dataset.editing, 10);
+            if (!id) return closeEditModal();
+            const payload = new URLSearchParams({
+                name: document.getElementById('edit-name').value.trim(),
+                description: document.getElementById('edit-description').value.trim(),
+                priority: document.getElementById('edit-priority').value,
+                due_date: document.getElementById('edit-due_date').value
+            });
+            fetch(`/task/${id}/update`, { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: payload })
+                .then(r => r.json())
+                .then(data => {
+                    allTasks = data;
+                    renderTasks(data);
+                    closeEditModal();
+                });
+        });
+
+        window.addEventListener('DOMContentLoaded', initializeApp);
+    </script>
+</body>
+</html>
