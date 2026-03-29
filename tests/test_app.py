@@ -9,4 +9,4 @@ def test_app_responds():
     app.config['TESTING'] = True
     with app.test_client() as c:
         rv = c.get('/')
-    assert rv.status_code in [200, 302]
+    assert rv.status_code == 201
